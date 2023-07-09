@@ -55,6 +55,8 @@ const char* topic_aprs = "/hamlorachat/aprs-it";
 String inmex = "";
 bool newmex = false;
 
+bool mqtt = false;
+
 
 
 Adafruit_SSD1306 display(OLED_WIDTH, OLED_HEIGHT, &Wire);
@@ -124,6 +126,23 @@ void callback(char *topic, byte *payload, unsigned int length) {
   inmex = mex;
 }}
 
+void updatelcd(){
+
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3c, false, false);
+  display.clearDisplay();
+  display.setTextColor(WHITE);
+  display.setTextSize(1);
+  display.setCursor(28,0);
+  display.print("HamLoraChatGW");
+  if (mqtt){
+    display.print("MQTT: OK ");
+  }
+  else {
+    display.print("MQTT: KO");
+  }
+  display.display();
+}
+
 
 
 void setup(){
@@ -137,13 +156,8 @@ void setup(){
   LoRa.begin(LORA_FRQ);
 
   Wire.begin(OLED_SDA, OLED_SCL);
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3c, false, false);
-  display.clearDisplay();
-  display.setTextColor(WHITE);
-  display.setTextSize(1);
-  display.setCursor(28,0);
-  display.print("HamLoraChatGW");
 
+  updatelcd();
 
   if(GATEWAY){
     WiFi.mode(WIFI_STA);
@@ -167,18 +181,21 @@ void setup(){
     while (!client.connected()) {
     if (client.connect(QRZ, mqtt_user, mqtt_pass)) {
         Serial.println("Mqtt broker connected");
-        display.print("MQTT: OK ");
+        mqtt = true;
+        updatelcd();
     } else {
         Serial.print("failed with state ");
-        display.print("MQTT: KO ");
+        mqtt = false;
         Serial.print(client.state());
         delay(2000);
+        updatelcd();
     }
     }
     client.subscribe(topic);
     display.display();
   }
   if(REPEATER){
+    updatelcd();
     display.setCursor(5, 20);
     display.print("REPEATER: OK");
     display.display();
