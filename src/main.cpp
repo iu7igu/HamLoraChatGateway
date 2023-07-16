@@ -52,10 +52,13 @@ const char* topic_aprs = "/hamlorachat/aprs-it";
 #define OLED_WIDTH 128
 #define OLED_HEIGHT 64
 
+#define DEBUG     false
+
 String inmex = "";
 bool newmex = false;
 
 bool mqtt = false;
+
 
 
 unsigned long previousMillis = 0;
@@ -137,6 +140,7 @@ void updatelcd(){
   display.setTextSize(1);
   display.setCursor(28,0);
   display.print("HamLoraChatGW");
+  if (WiFi.status() == WL_CONNECTED){
   display.setCursor(5, 20);
   display.print("IP: ");
     display.print(WiFi.localIP());
@@ -145,14 +149,16 @@ void updatelcd(){
   }
   else {
     display.print("MQTT: KO");
-  }
+  }}
   display.display();
 }
 
 
 
 void setup(){
-  Serial.begin(9600);
+  if (DEBUG){
+    Serial.begin(9600);
+  }
 
   SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_CS);
   LoRa.setPins(LORA_CS, LORA_ReST, LORA_DIO);
@@ -168,7 +174,9 @@ void setup(){
   if(GATEWAY){
     WiFi.mode(WIFI_STA);
     WiFi.begin(SSID, WIPSW);
+    if (DEBUG){
     Serial.print("Connecting to WiFi ..");
+    }
     
     client.setServer(MQTT_SERVER, 1883);
     client.setCallback(callback);
@@ -177,11 +185,15 @@ void setup(){
 
     while (!client.connected()) {
     if (client.connect(QRZ, mqtt_user, mqtt_pass)) {
+        if (DEBUG){
         Serial.println("Mqtt broker connected");
+        }
         mqtt = true;
         updatelcd();
     } else {
+      if (DEBUG){
         Serial.print("failed with state ");
+      }
         mqtt = false;
         Serial.print(client.state());
         delay(2000);
@@ -207,8 +219,10 @@ void loop(){
    unsigned long currentMillis = millis();
   // if WiFi is down, try reconnecting every CHECK_WIFI_TIME seconds
   if ((WiFi.status() != WL_CONNECTED) && (currentMillis - previousMillis >=interval)) {
+    if (DEBUG){
     Serial.print(millis());
     Serial.println("Reconnecting to WiFi...");
+    }
     WiFi.disconnect();
     WiFi.reconnect();
     previousMillis = currentMillis;
@@ -218,7 +232,9 @@ void loop(){
   if (newmex and inmex != ""){
         LoRa.beginPacket();
         LoRa.print(inmex);
+        if (DEBUG){
         Serial.println(inmex);
+        }
         LoRa.endPacket(true);
         newmex = false;
         inmex = "";
