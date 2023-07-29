@@ -143,12 +143,13 @@ void updatelcd(){
   if (WiFi.status() == WL_CONNECTED){
   display.setCursor(5, 20);
   display.print("IP: ");
-    display.print(WiFi.localIP());
+  display.print(WiFi.localIP());
+  display.setCursor(5, 35);
   if (mqtt){
-    display.print("MQTT: OK ");
+    display.println("MQTT: OK ");
   }
   else {
-    display.print("MQTT: KO");
+    display.println("MQTT: KO");
   }}
   display.display();
 }
@@ -180,8 +181,6 @@ void setup(){
     
     client.setServer(MQTT_SERVER, 1883);
     client.setCallback(callback);
-
-    display.setCursor(5, 35);
 
     while (!client.connected()) {
     if (client.connect(QRZ, mqtt_user, mqtt_pass)) {
@@ -215,6 +214,16 @@ void loop(){
   int packetSize = LoRa.parsePacket();
   if(GATEWAY){
     client.loop();
+
+    if(client.connected()){
+      mqtt=true;
+      updatelcd();
+      delay(200);
+    }else{
+      mqtt=false;
+      updatelcd();
+      delay(200);
+    }
 
    unsigned long currentMillis = millis();
   // if WiFi is down, try reconnecting every CHECK_WIFI_TIME seconds
