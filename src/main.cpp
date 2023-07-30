@@ -53,17 +53,19 @@ const char* topic_aprs = "/hamlorachat/aprs-it";
 #define OLED_HEIGHT 64
 
 #define DEBUG     false
+#define LCD       true
 
-String inmex = "";
-bool newmex = false;
 
 bool mqtt = false;
 
 
+unsigned long previousWifi = 0;
+unsigned long check_wifi_time = 30000;   //Time in milliseconds
+unsigned long previousMqtt = 0;
+unsigned long check_mqtt_time = 10000;   //Time in milliseconds
 
-unsigned long previousMillis = 0;
-unsigned long interval = 30000;
-
+String inmex = "";
+bool newmex = false;
 
 Adafruit_SSD1306 display(OLED_WIDTH, OLED_HEIGHT, &Wire);
 
@@ -133,7 +135,7 @@ void callback(char *topic, byte *payload, unsigned int length) {
 }}
 
 void updatelcd(){
-
+if (LCD){
   display.begin(SSD1306_SWITCHCAPVCC, 0x3c, false, false);
   display.clearDisplay();
   display.setTextColor(WHITE);
@@ -153,6 +155,7 @@ void updatelcd(){
   }}
   display.display();
 }
+}
 
 
 
@@ -168,9 +171,11 @@ void setup(){
   LoRa.setSignalBandwidth(LORA_BANDW);
   LoRa.begin(LORA_FRQ);
 
+  if(LCD){
   Wire.begin(OLED_SDA, OLED_SCL);
 
   updatelcd();
+  }
 
   if(GATEWAY){
     WiFi.mode(WIFI_STA);
@@ -204,9 +209,11 @@ void setup(){
   }
   if(REPEATER){
     updatelcd();
-    display.setCursor(5, 20);
+    if (LCD){
+    display.setCursor(5, 45);
     display.print("REPEATER: OK");
     display.display();
+    }
   }
 }
 
@@ -215,26 +222,26 @@ void loop(){
   if(GATEWAY){
     client.loop();
 
-    if(client.connected()){
-      mqtt=true;
-      updatelcd();
-      delay(200);
-    }else{
-      mqtt=false;
-      updatelcd();
-      delay(200);
-    }
-
    unsigned long currentMillis = millis();
   // if WiFi is down, try reconnecting every CHECK_WIFI_TIME seconds
-  if ((WiFi.status() != WL_CONNECTED) && (currentMillis - previousMillis >=interval)) {
+  if ((WiFi.status() != WL_CONNECTED) && (currentMillis - previousWifi >=check_wifi_time)) {
     if (DEBUG){
     Serial.print(millis());
     Serial.println("Reconnecting to WiFi...");
     }
     WiFi.disconnect();
     WiFi.reconnect();
-    previousMillis = currentMillis;
+    previousWifi = currentMillis;
+  }
+  if (currentMillis - previousMqtt >= check_mqtt_time){
+    if(client.connected() == false){
+      mqtt = false;
+      updatelcd();
+    }else{
+      mqtt=true;
+      updatelcd();
+    }
+    previousMqtt = currentMillis;
   }
 }
 
